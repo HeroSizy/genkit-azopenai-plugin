@@ -1,6 +1,7 @@
 # 🔥 Azure OpenAI Plugin for Firebase Genkit
 
-> ⚡ **Pure vibe coded SDK** 
+> ⚡ **Pure vibe coded SDK**
+> 
 > 🛠️ Crafted with **Cursor**, **Claude Sonnet 4**, and **yuanyang** ☕️
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/herosizy/genkit-go-plugins.svg)](https://pkg.go.dev/github.com/herosizy/genkit-go-plugins)
