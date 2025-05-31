@@ -2,7 +2,7 @@
 
 > ⚡ **Pure vibe coded SDK**
 > 
-> 🛠️ Crafted with **Cursor**, **Claude Sonnet 4**, and **yuanyang** ☕️
+> 🛠️ Crafted with **Cursor**, **Claude Sonnet 4**, and **[yuanyang](https://en.wikipedia.org/wiki/Yuenyeung)** ☕️
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/herosizy/genkit-go-plugins.svg)](https://pkg.go.dev/github.com/herosizy/genkit-go-plugins)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
