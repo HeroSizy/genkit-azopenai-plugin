@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/HeroSizy/genkit-go-plugins/azopenai"
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
-	"github.com/herosizy/genkit-go-plugins/azopenai"
 )
 
 func ExampleAzureOpenAI_basic() {

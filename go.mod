@@ -1,4 +1,4 @@
-module github.com/herosizy/genkit-go-plugins
+module github.com/HeroSizy/genkit-go-plugins
 
 go 1.24.3
 
