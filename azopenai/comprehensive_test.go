@@ -842,3 +842,304 @@ func TestEmbedderConfiguration(t *testing.T) {
 		})
 	}
 }
+
+// Test Embedder function with successful case to increase coverage
+func TestEmbedder_SuccessCase(t *testing.T) {
+	ctx := context.Background()
+	g, err := genkit.Init(ctx)
+	if err != nil {
+		t.Fatalf("Failed to initialize Genkit: %v", err)
+	}
+
+	// First define an embedder to make it available
+	plugin := &AzureOpenAI{}
+	embedder, err := plugin.DefineEmbedder(g, TextEmbedding3Small)
+	if err != nil {
+		t.Fatalf("Failed to define embedder: %v", err)
+	}
+
+	// Now test the Embedder function to get it
+	retrievedEmbedder := Embedder(g, TextEmbedding3Small)
+	if retrievedEmbedder == nil {
+		t.Error("Embedder() should return non-nil embedder when it exists")
+	}
+
+	// Verify both embedders are the same
+	if embedder != retrievedEmbedder {
+		t.Error("Defined embedder and retrieved embedder should be the same")
+	}
+}
+
+// Test AzureOpenAI.Init with more error scenarios
+func TestAzureOpenAI_Init_MoreErrorScenarios(t *testing.T) {
+	// Test already initialized plugin
+	originalAPIKey := os.Getenv("AZURE_OPEN_AI_API_KEY")
+	originalEndpoint := os.Getenv("AZURE_OPEN_AI_ENDPOINT")
+	defer func() {
+		os.Setenv("AZURE_OPEN_AI_API_KEY", originalAPIKey)
+		os.Setenv("AZURE_OPEN_AI_ENDPOINT", originalEndpoint)
+	}()
+
+	os.Setenv("AZURE_OPEN_AI_API_KEY", "test-api-key")
+	os.Setenv("AZURE_OPEN_AI_ENDPOINT", "https://test.openai.azure.com/")
+
+	ctx := context.Background()
+	g, err := genkit.Init(ctx)
+	if err != nil {
+		t.Fatalf("Failed to initialize Genkit: %v", err)
+	}
+
+	plugin := &AzureOpenAI{}
+
+	// Set as already initialized
+	plugin.initted = true
+
+	// Should return error for already initialized
+	err = plugin.Init(ctx, g)
+	if err == nil {
+		t.Error("Expected error for already initialized plugin")
+	}
+	if !strings.Contains(err.Error(), "already initialized") {
+		t.Errorf("Expected 'already initialized' error, got: %v", err)
+	}
+}
+
+// Test AzureOpenAI.DefineModel with custom info
+func TestAzureOpenAI_DefineModel_WithCustomInfo(t *testing.T) {
+	originalAPIKey := os.Getenv("AZURE_OPEN_AI_API_KEY")
+	originalEndpoint := os.Getenv("AZURE_OPEN_AI_ENDPOINT")
+	defer func() {
+		os.Setenv("AZURE_OPEN_AI_API_KEY", originalAPIKey)
+		os.Setenv("AZURE_OPEN_AI_ENDPOINT", originalEndpoint)
+	}()
+
+	os.Setenv("AZURE_OPEN_AI_API_KEY", "test-api-key")
+	os.Setenv("AZURE_OPEN_AI_ENDPOINT", "https://test.openai.azure.com/")
+
+	ctx := context.Background()
+	g, err := genkit.Init(ctx)
+	if err != nil {
+		t.Fatalf("Failed to initialize Genkit: %v", err)
+	}
+
+	plugin := &AzureOpenAI{}
+
+	// Force initialization to set initted flag
+	plugin.initted = true
+
+	customInfo := &ai.ModelInfo{
+		Label: "Custom Test Model",
+		Supports: &ai.ModelSupports{
+			Multiturn:  true,
+			Tools:      false,
+			SystemRole: true,
+			Media:      false,
+		},
+		Stage: ai.ModelStageStable,
+	}
+
+	// Test with custom model info
+	model, err := plugin.DefineModel(g, "custom-test-model", customInfo)
+	if err != nil {
+		t.Errorf("DefineModel() should not return error for custom model info: %v", err)
+	}
+	if model == nil {
+		t.Error("DefineModel() should return non-nil model")
+	}
+}
+
+// Test IsDefinedEmbedder with listEmbedders error simulation
+func TestIsDefinedEmbedder_WithListError(t *testing.T) {
+	// This test checks the error path in IsDefinedEmbedder
+	// Since we can't easily mock listEmbedders to return an error,
+	// we'll test the normal cases more thoroughly
+
+	tests := []struct {
+		name         string
+		embedderName string
+		expected     bool
+	}{
+		{
+			name:         "valid small embedder",
+			embedderName: TextEmbedding3Small,
+			expected:     true,
+		},
+		{
+			name:         "valid large embedder",
+			embedderName: TextEmbedding3Large,
+			expected:     true,
+		},
+		{
+			name:         "invalid embedder",
+			embedderName: "non-existent-embedder",
+			expected:     false,
+		},
+		{
+			name:         "empty embedder name",
+			embedderName: "",
+			expected:     false,
+		},
+		{
+			name:         "partial match",
+			embedderName: "text-embedding",
+			expected:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsDefinedEmbedder(tt.embedderName)
+			if result != tt.expected {
+				t.Errorf("IsDefinedEmbedder(%q) = %v, want %v", tt.embedderName, result, tt.expected)
+			}
+		})
+	}
+}
+
+// Test listModels error path coverage
+func TestListModels_Coverage(t *testing.T) {
+	// Test the successful case to ensure all models are returned
+	models, err := listModels()
+	if err != nil {
+		t.Errorf("listModels() should not return error: %v", err)
+	}
+
+	// Verify specific models exist in the list
+	requiredModels := []string{Gpt4o, Gpt4, TextEmbedding3Small, TextEmbedding3Large}
+	for _, required := range requiredModels {
+		if _, exists := models[required]; !exists {
+			t.Errorf("Required model %s not found in models list", required)
+		}
+	}
+
+	// Verify model info structure
+	for name, modelInfo := range models {
+		if modelInfo.Label == "" {
+			t.Errorf("Model %s has empty label", name)
+		}
+		if modelInfo.Supports == nil {
+			t.Errorf("Model %s has nil supports", name)
+		}
+		if len(modelInfo.Versions) == 0 {
+			t.Errorf("Model %s has no versions", name)
+		}
+	}
+}
+
+// Test modelRef with various configurations
+func TestModelRef_Configurations(t *testing.T) {
+	tests := []struct {
+		name   string
+		model  string
+		config *OpenAIConfig
+	}{
+		{
+			name:   "basic model ref",
+			model:  Gpt4o,
+			config: nil,
+		},
+		{
+			name:  "model ref with config",
+			model: Gpt4o,
+			config: &OpenAIConfig{
+				DeploymentName: "gpt-4o-deployment",
+				Temperature:    &[]float32{0.7}[0],
+				MaxTokens:      &[]int32{100}[0],
+			},
+		},
+		{
+			name:  "model ref with all options",
+			model: Gpt4,
+			config: &OpenAIConfig{
+				DeploymentName:   "gpt-4-deployment",
+				Temperature:      &[]float32{0.5}[0],
+				MaxTokens:        &[]int32{200}[0],
+				TopP:             &[]float32{0.9}[0],
+				PresencePenalty:  &[]float32{0.1}[0],
+				FrequencyPenalty: &[]float32{0.2}[0],
+				LogitBias:        map[string]*int32{"test": &[]int32{1}[0]},
+				User:             "test-user",
+				Seed:             &[]int64{42}[0],
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			modelRef := ModelRef(tt.model, tt.config)
+			// Test that ModelRef executes successfully without panics
+			// We can't easily test the internal structure without accessing private fields
+			_ = modelRef // Verify the function doesn't panic
+		})
+	}
+}
+
+// Test more DefineModel scenarios
+func TestDefineModel_MoreScenarios(t *testing.T) {
+	ctx := context.Background()
+	g, err := genkit.Init(ctx)
+	if err != nil {
+		t.Fatalf("Failed to initialize Genkit: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		modelName string
+		info      *ai.ModelInfo
+	}{
+		{
+			name:      "text model",
+			modelName: "test-text-model",
+			info: &ai.ModelInfo{
+				Label:    "Test Text Model",
+				Versions: []string{"v1.0"},
+				Supports: &ai.ModelSupports{
+					Multiturn:  true,
+					Tools:      true,
+					SystemRole: true,
+					Media:      false,
+				},
+				Stage: ai.ModelStageStable,
+			},
+		},
+		{
+			name:      "multimodal model",
+			modelName: "test-multimodal-model",
+			info: &ai.ModelInfo{
+				Label:    "Test Multimodal Model",
+				Versions: []string{"v1.0", "v1.1"},
+				Supports: &ai.ModelSupports{
+					Multiturn:  true,
+					Tools:      true,
+					SystemRole: true,
+					Media:      true,
+				},
+				Stage: ai.ModelStageStable,
+			},
+		},
+		{
+			name:      "experimental model",
+			modelName: "test-experimental-model",
+			info: &ai.ModelInfo{
+				Label:    "Test Experimental Model",
+				Versions: []string{"v0.1"},
+				Supports: &ai.ModelSupports{
+					Multiturn:  false,
+					Tools:      false,
+					SystemRole: false,
+					Media:      false,
+				},
+				Stage: ai.ModelStageUnstable,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := DefineModel(g, tt.modelName, tt.info)
+			if model == nil {
+				t.Error("DefineModel() should return non-nil model")
+			}
+		})
+	}
+}
