@@ -162,7 +162,7 @@ func TestAzureOpenAI_Init_DoubleInit(t *testing.T) {
 	plugin := &AzureOpenAI{}
 
 	// First init (will fail due to auth, but sets initted flag)
-	plugin.Init(ctx, g)
+	_ = plugin.Init(ctx, g)
 
 	// Second init should fail with "already initialized"
 	err = plugin.Init(ctx, g)

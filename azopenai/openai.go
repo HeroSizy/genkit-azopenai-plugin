@@ -253,7 +253,9 @@ func handleStreamingRequest(ctx context.Context, client *azopenai.Client, option
 						Content: []*ai.Part{ai.NewTextPart(content)},
 						Role:    ai.RoleModel,
 					}
-					cb(ctx, chunk)
+					if err := cb(ctx, chunk); err != nil {
+						return nil, fmt.Errorf("streaming callback error: %w", err)
+					}
 				}
 			}
 

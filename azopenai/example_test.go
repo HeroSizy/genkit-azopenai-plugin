@@ -76,7 +76,10 @@ func ExampleAzureOpenAI_streaming() {
 	}
 
 	azurePlugin := &azopenai.AzureOpenAI{}
-	azurePlugin.Init(ctx, g)
+	if err := azurePlugin.Init(ctx, g); err != nil {
+		fmt.Printf("Failed to initialize Azure OpenAI plugin: %v\n", err)
+		return
+	}
 
 	// Get a reference to a model
 	model := azopenai.Model(g, azopenai.Gpt4o)
@@ -126,7 +129,10 @@ func ExampleModelRef() {
 	}
 
 	azurePlugin := &azopenai.AzureOpenAI{}
-	azurePlugin.Init(ctx, g)
+	if err := azurePlugin.Init(ctx, g); err != nil {
+		fmt.Printf("Failed to initialize Azure OpenAI plugin: %v\n", err)
+		return
+	}
 
 	// ModelRef is typically used in flows, but for direct generation,
 	// you should use the Model() function instead
@@ -180,7 +186,10 @@ func ExampleAzureOpenAI_toolCalling() {
 	}
 
 	azurePlugin := &azopenai.AzureOpenAI{}
-	azurePlugin.Init(ctx, g)
+	if err := azurePlugin.Init(ctx, g); err != nil {
+		fmt.Printf("Failed to initialize Azure OpenAI plugin: %v\n", err)
+		return
+	}
 
 	// Get a reference to a model
 	model := azopenai.Model(g, "gpt-4o")
