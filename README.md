@@ -433,7 +433,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 2. **Set up environment**
    ```bash
-   cp .env.example .env
+   cp .example.env .env
    # Edit .env with your Azure OpenAI credentials
    ```
 

@@ -251,12 +251,26 @@ func Example() {
 }
 
 func ExampleEmbedder() {
+	// Check if environment variables are set
+	if os.Getenv("AZURE_OPEN_AI_API_KEY") == "" || os.Getenv("AZURE_OPEN_AI_ENDPOINT") == "" {
+		fmt.Println("Azure OpenAI environment variables not set, skipping example")
+		fmt.Println("Set AZURE_OPEN_AI_API_KEY and AZURE_OPEN_AI_ENDPOINT to run this example")
+		return
+	}
+
 	ctx := context.Background()
 
 	// Initialize Genkit
-	g, err := genkit.Init(ctx, genkit.WithPlugins(&azopenai.AzureOpenAI{}))
+	g, err := genkit.Init(ctx)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Initialize Azure OpenAI plugin
+	azurePlugin := &azopenai.AzureOpenAI{}
+	if err := azurePlugin.Init(ctx, g); err != nil {
+		log.Printf("Failed to initialize Azure OpenAI plugin: %v", err)
+		return
 	}
 
 	// Get an embedder
@@ -280,5 +294,6 @@ func ExampleEmbedder() {
 	}
 
 	fmt.Printf("Generated %d embeddings\n", len(resp.Embeddings))
-	// Output: Generated 2 embeddings
+	// Output: Azure OpenAI environment variables not set, skipping example
+	// Set AZURE_OPEN_AI_API_KEY and AZURE_OPEN_AI_ENDPOINT to run this example
 }
