@@ -50,9 +50,94 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
+  # Quality jobs that depend on test job for efficiency
+  quality:
+    name: 🔍 Quality Checks
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        check: [lint, security, format, mod-tidy]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: 📦 Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-1.24-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-1.24-
+
+    - name: 🧹 Run golangci-lint
+      if: matrix.check == 'lint'
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: latest
+        args: --timeout=10m
+
+    - name: 🛡️ Run Gosec Security Scanner
+      if: matrix.check == 'security'
+      uses: securego/gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out results.sarif ./...'
+
+    - name: 📤 Upload SARIF file
+      if: matrix.check == 'security'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: results.sarif
+      continue-on-error: true
+
+    - name: 🔍 Run govulncheck
+      if: matrix.check == 'security'
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
+
+    - name: 📐 Check formatting
+      if: matrix.check == 'format'
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "❌ The following files are not formatted:"
+          gofmt -s -l .
+          echo "Run 'gofmt -s -w .' to fix formatting issues"
+          exit 1
+        fi
+        echo "✅ All files are properly formatted"
+
+    - name: 🧹 Check imports
+      if: matrix.check == 'format'
+      run: |
+        go install golang.org/x/tools/cmd/goimports@latest
+        if [ "$(goimports -l . | wc -l)" -gt 0 ]; then
+          echo "❌ The following files have import issues:"
+          goimports -l .
+          echo "Run 'goimports -w .' to fix import issues"
+          exit 1
+        fi
+        echo "✅ All imports are properly organized"
+
+    - name: 🧹 Check go mod tidy
+      if: matrix.check == 'mod-tidy'
+      run: |
+        go mod tidy
+        git diff --exit-code go.mod
+        git diff --exit-code go.sum
+
   coverage:
     name: 📊 Coverage Report
     runs-on: ubuntu-latest
+    needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
@@ -64,6 +149,16 @@ jobs:
       with:
         go-version: '1.24'
 
+    - name: 📦 Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-1.24-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-1.24-
+
     - name: 🧪 Run tests with coverage
       run: go test -v -race -coverprofile=coverage.out ./...
 
@@ -73,105 +168,4 @@ jobs:
         report: true
         chart: true
         amend: true
-      continue-on-error: true
-
-  lint:
-    name: 🔍 Lint
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🔧 Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24'
-
-    - name: 🧹 Run golangci-lint
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: latest
-        args: --timeout=10m
-
-  security:
-    name: 🔒 Security
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🔧 Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24'
-
-    - name: 🛡️ Run Gosec Security Scanner
-      uses: securego/gosec@master
-      with:
-        args: '-no-fail -fmt sarif -out results.sarif ./...'
-
-    - name: 📤 Upload SARIF file
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: results.sarif
-      continue-on-error: true
-
-    - name: 🔍 Run govulncheck
-      run: |
-        go install golang.org/x/vuln/cmd/govulncheck@latest
-        govulncheck ./...
-
-  format:
-    name: 📝 Format Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🔧 Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24'
-
-    - name: 📐 Check formatting
-      run: |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "❌ The following files are not formatted:"
-          gofmt -s -l .
-          echo "Run 'gofmt -s -w .' to fix formatting issues"
-          exit 1
-        fi
-        echo "✅ All files are properly formatted"
-
-    - name: 🧹 Check imports
-      run: |
-        go install golang.org/x/tools/cmd/goimports@latest
-        if [ "$(goimports -l . | wc -l)" -gt 0 ]; then
-          echo "❌ The following files have import issues:"
-          goimports -l .
-          echo "Run 'goimports -w .' to fix import issues"
-          exit 1
-        fi
-        echo "✅ All imports are properly organized"
-
-  mod-tidy:
-    name: 📦 Module Tidy
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-
-    - name: 🔧 Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24'
-
-    - name: 🧹 Check go mod tidy
-      run: |
-        go mod tidy
-        git diff --exit-code go.mod
-        git diff --exit-code go.sum 
+      continue-on-error: true 
