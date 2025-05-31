@@ -22,7 +22,6 @@ package azopenai
 
 import (
 	"context"
-	"io"
 	"os"
 	"strings"
 	"testing"
@@ -31,11 +30,6 @@ import (
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
 )
-
-// Mock client for testing
-type mockClient struct {
-	client *azopenai.Client
-}
 
 // Test Model function
 func TestModel(t *testing.T) {
@@ -462,26 +456,6 @@ func TestAzureOpenAI_Init_WithEmbedders(t *testing.T) {
 	if len(embeddingModels) == 0 {
 		t.Error("Should have at least one embedding model")
 	}
-}
-
-// Mock streaming response for testing
-type mockStreamResponse struct {
-	responses []azopenai.ChatCompletions
-	index     int
-	closed    bool
-}
-
-func (m *mockStreamResponse) Read() (azopenai.ChatCompletions, error) {
-	if m.index >= len(m.responses) {
-		return azopenai.ChatCompletions{}, io.EOF
-	}
-	resp := m.responses[m.index]
-	m.index++
-	return resp, nil
-}
-
-func (m *mockStreamResponse) Close() {
-	m.closed = true
 }
 
 // Test with nil plugin in Init
