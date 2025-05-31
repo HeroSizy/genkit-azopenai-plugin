@@ -1,0 +1,112 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    name: 🎉 Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🔧 Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: 📦 Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-1.24-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-1.24-
+
+    - name: 📁 Verify dependencies
+      run: go mod verify
+
+    - name: 🏗️ Build and verify module
+      run: |
+        go build -v ./...
+        go mod tidy
+        echo "✅ Module build successful"
+
+    - name: 🧪 Run tests
+      run: go test -v -race ./...
+
+    - name: 📋 Generate release notes
+      id: release_notes
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          echo "📖 Using CHANGELOG.md for release notes"
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "## 🎉 Release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📋 What's Changed" >> $GITHUB_OUTPUT
+          echo "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for detailed changes." >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📦 Installation" >> $GITHUB_OUTPUT
+          echo '```bash' >> $GITHUB_OUTPUT
+          echo "go get github.com/${{ github.repository }}@${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 🔗 Documentation" >> $GITHUB_OUTPUT
+          echo "- [README](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md)" >> $GITHUB_OUTPUT
+          echo "- [Go Package Documentation](https://pkg.go.dev/github.com/${{ github.repository }}@${{ github.ref_name }})" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 🛠️ Azure OpenAI Integration" >> $GITHUB_OUTPUT
+          echo "This release provides seamless integration between Firebase Genkit and Azure OpenAI services." >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "📝 Generating basic release notes"
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "## 🎉 Release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "Azure OpenAI Genkit Plugin release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📦 Installation" >> $GITHUB_OUTPUT
+          echo '```bash' >> $GITHUB_OUTPUT
+          echo "go get github.com/${{ github.repository }}@${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        fi
+
+    - name: 🚀 Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: 🎉 Release ${{ github.ref_name }}
+        body: ${{ steps.release_notes.outputs.body }}
+        draft: false
+        prerelease: ${{ contains(github.ref_name, '-') }}
+        generate_release_notes: true
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🌐 Warm Go Proxy Cache
+      run: |
+        echo "🔄 Warming Go proxy cache for github.com/${{ github.repository }}@${{ github.ref_name }}"
+        # Wait a bit for the tag to propagate
+        sleep 30
+        # Request the module info to warm the proxy cache
+        curl -f "https://proxy.golang.org/github.com/${{ github.repository }}/@v/${{ github.ref_name }}.info" || echo "⚠️  Proxy warming failed (this is normal for new releases)"
+        echo "✅ Go proxy warming completed"
+
+    - name: 📢 Release Summary
+      run: |
+        echo "🎉 Successfully created release ${{ github.ref_name }}"
+        echo "📦 Module: github.com/${{ github.repository }}"
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+        echo "📖 Package Docs: https://pkg.go.dev/github.com/${{ github.repository }}@${{ github.ref_name }}" 
