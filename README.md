@@ -7,7 +7,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/HeroSizy/genkit-go-plugins.svg)](https://pkg.go.dev/github.com/HeroSizy/genkit-go-plugins)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/HeroSizy/genkit-go-plugins)](https://goreportcard.com/report/github.com/HeroSizy/genkit-go-plugins)
-[![CI](https://github.com/HeroSizy/genkit-go-plugins/workflows/CI/badge.svg)](https://github.com/HeroSizy/genkit-go-plugins/actions)
+[![CI](https://github.com/HeroSizy/genkit-go-plugins/actions/workflows/ci.yml/badge.svg)](https://github.com/HeroSizy/genkit-go-plugins/actions/workflows/ci.yml)
 [![Go Coverage](https://github.com/HeroSizy/genkit-go-plugins/wiki/coverage.svg)](https://raw.githack.com/wiki/HeroSizy/genkit-go-plugins/coverage.html)
 
 A production-ready Azure OpenAI integration for [Firebase Genkit](https://firebase.google.com/docs/genkit) that provides seamless access to Azure OpenAI's advanced language models and embedding services.
